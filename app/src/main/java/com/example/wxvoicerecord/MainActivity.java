@@ -12,7 +12,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.wxvoicerecord.adapter.VoiceMsgAdapter;
 import com.example.wxvoicerecord.bean.VoiceMsg;
-import com.example.wxvoicerecord.voice.RecordButton;
+import com.example.wxvoicerecord.voice.record.RecordButton;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,13 +38,19 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
 
         RecordButton recordButton = findViewById(R.id.btn_record);
-        recordButton.setmOnFinishedRecordListener(new RecordButton.OnFinishedRecordListener() {
+        recordButton.setOnRecordListener(new RecordButton.OnRecordListener() {
+
             @Override
-            public void onFinishedRecord(String audioPath, int time) {
+            public void onFinish(String audioPath, int time) {
                 VoiceMsg msg = new VoiceMsg(audioPath, time, System.currentTimeMillis());
                 voiceMsgList.add(msg);
                 adapter.notifyDataSetChanged();
                 recyclerView.scrollToPosition(voiceMsgList.size() - 1);
+            }
+
+            @Override
+            public void onCancel() {
+
             }
         });
     }

@@ -6,7 +6,7 @@
     android:background="@android:color/transparent">
 
     <com.example.wxvoicerecord.voice.VoiceStatusPanel
-        android:id="@+id/btn_wx_voice"
+        android:id="@+id/voice_status_panel"
         android:layout_width="match_parent"
         android:layout_height="90dp"
         android:layout_above="@id/tv_cancel"

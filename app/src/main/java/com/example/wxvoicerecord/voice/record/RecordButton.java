@@ -1,4 +1,4 @@
-package com.example.wxvoicerecord.voice;
+package com.example.wxvoicerecord.voice.record;
 
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
@@ -24,13 +24,19 @@ import android.widget.Toast;
 
 import com.example.wxvoicerecord.BuildConfig;
 import com.example.wxvoicerecord.R;
+import com.example.wxvoicerecord.dialog.RecordStatusDialog;
 import com.example.wxvoicerecord.utils.ViewUtils;
+import com.example.wxvoicerecord.voice.MediaManager;
 
 import java.io.File;
 
 import androidx.appcompat.widget.AppCompatButton;
 
-
+/**
+ * Created by Horrarndoo on 2022/9/21.
+ * <p>
+ * 录音按钮（实现类似微信点击录音的效果，并且对使用者提供回调）
+ */
 public class RecordButton extends AppCompatButton {
     private final static String TAG = "RecordButton";
     /**
@@ -42,25 +48,17 @@ public class RecordButton extends AppCompatButton {
      */
     private final static int CANCEL = 2;
     /**
-     * 最短录音时间（单位：ms）
-     **/
-    private final static int MIN_RECORD_TIME_THRESHOLD = 1000;
-    /**
-     * 最长录音时间（单位：ms）
-     **/
-    private final static int MAX_RECORD_TIME_THRESHOLD = 1000 * 30;
-    /**
-     * 录音剩余时间提醒阈值（录音剩余时间少于这个值就提醒，单位：ms）
-     */
-    private final static int RECORD_LEFT_TIME_TO_NOTICE = 1000 * 10;
-    /**
      * 录音文件名
      */
     private String mRecordFileName;
     /**
-     * 录音结束监听
+     * 录音配置
      */
-    private OnFinishedRecordListener mOnFinishedRecordListener;
+    private IRecordConfig mRecordConfig;
+    /**
+     * 录音监听
+     */
+    private OnRecordListener mOnRecordListener;
     /**
      * 开始录音时间
      */
@@ -74,27 +72,12 @@ public class RecordButton extends AppCompatButton {
      */
     private volatile int mRecordingState = NORMAL;
     /**
-     * 图标初始宽度（用于动画）
-     */
-    private int mOriginIconWidth;
-    /**
-     * 图标初始高度（用于动画）
-     */
-    private int mOriginIconHeight;
-
-    /**
      * 录音状态dialog
      */
-    private Dialog mRecordStatusDialog;
-    private LinearLayout llBottom;
-    private TextView tvCancel;
-    private TextView tvSend;
-    private ImageView ivRecord;
-    private ImageView ivCancel;
+    private RecordStatusDialog mRecordStatusDialog;
     private volatile MediaRecorder mRecorder;
     private boolean runningObtainDecibelThread = true;
     private ObtainDecibelThread mThread;
-    private VoiceStatusPanel mVoiceStatusPanel;
 
     public RecordButton(Context context) {
         this(context, null);
@@ -105,11 +88,17 @@ public class RecordButton extends AppCompatButton {
     }
 
     public RecordButton(Context context, AttributeSet attrs, int defStyle) {
+        //取消按键阴影
         super(context, attrs, android.R.attr.borderlessButtonStyle);
+        mRecordConfig = new DefaultRecordConfig();
     }
 
-    public void setmOnFinishedRecordListener(OnFinishedRecordListener listener) {
-        mOnFinishedRecordListener = listener;
+    public void setOnRecordListener(OnRecordListener listener) {
+        mOnRecordListener = listener;
+    }
+
+    public void setRecordConfig(IRecordConfig config) {
+        this.mRecordConfig = config;
     }
 
     @SuppressLint({"ClickableViewAccessibility", "UseCompatLoadingForDrawables"})
@@ -119,7 +108,6 @@ public class RecordButton extends AppCompatButton {
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 //按下的时候，重新生成一个语音保存的地址，避免一直读写一个文件，可以引起错误
-                setText("松开发送");
                 MediaManager.reset();//停止其他音频播放
                 initDialogAndStartRecord();
                 break;
@@ -130,15 +118,14 @@ public class RecordButton extends AppCompatButton {
                 }
                 if (!isLocationInRecordRect(event) && mRecordingState != CANCEL) {
                     mRecordingState = CANCEL;
-                    showRecordingCancel();
+                    mRecordStatusDialog.showRecordingCancel();
                 } else if (isLocationInRecordRect(event) && mRecordingState != NORMAL) {
                     mRecordingState = NORMAL;
-                    showRecordingNormal();
+                    mRecordStatusDialog.showRecordingNormal();
                 }
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
-                this.setText("按住录音");
                 //当手指不在录音区域，会cancel
                 if (!isLocationInRecordRect(event)) {
                     cancelRecord();
@@ -154,103 +141,21 @@ public class RecordButton extends AppCompatButton {
      * 触点是否在录音区域中
      *
      * @param event 时间
-     * @return 是否在录音区域中
+     * @return 触点是否在录音区域中
      */
     private boolean isLocationInRecordRect(MotionEvent event) {
-        boolean result = ViewUtils.isEventAbsoluteLocationInView(getContext(), llBottom, event);
-        return result;
-    }
-
-    /**
-     * 显示正常录音状态
-     */
-    @SuppressLint("UseCompatLoadingForDrawables")
-    private void showRecordingNormal() {
-        tvCancel.setVisibility(INVISIBLE);
-        tvSend.setVisibility(VISIBLE);
-        mVoiceStatusPanel.setCancel(false);
-        llBottom.setBackground(getContext().getDrawable(R.drawable.layer_list_record_bottom_bg_selected));
-        ivRecord.setColorFilter(getResources().getColor(R.color.record_selected_bottom_icon_color));
-        ivCancel.setBackground(getContext().getDrawable(R.drawable.shape_record_cancel_button_unselected_bg));
-        ivCancel.setColorFilter(getResources().getColor(R.color.record_cancel_button_unselected_tint_color));
-        setCancelImageZoom(false);
-    }
-
-    /**
-     * 显示松手取消录音状态
-     */
-    @SuppressLint("UseCompatLoadingForDrawables")
-    private void showRecordingCancel() {
-        tvCancel.setVisibility(VISIBLE);
-        tvSend.setVisibility(INVISIBLE);
-        mVoiceStatusPanel.setCancel(true);
-        llBottom.setBackground(getContext().getDrawable(R.drawable.layer_list_record_bottom_bg_unselected));
-        ivRecord.setColorFilter(getResources().getColor(R.color.record_unselected_bottom_icon_color));
-        ivCancel.setBackground(getContext().getDrawable(R.drawable.shape_record_cancel_button_selected_bg));
-        ivCancel.setColorFilter(getResources().getColor(R.color.record_cancel_button_selected_tint_color));
-        setCancelImageZoom(true);
-    }
-
-    /**
-     * 设置取消按钮缩放
-     *
-     * @param zoomIn 是否放大
-     */
-    private void setCancelImageZoom(boolean zoomIn) {
-        ValueAnimator animator;
-        if (zoomIn) {
-            animator = ValueAnimator.ofFloat(1, 1.1f);
-        } else {
-            animator = ValueAnimator.ofFloat(1.1f, 1);
-        }
-        animator.setDuration(200);
-        animator.setInterpolator(new LinearInterpolator());
-        animator.setRepeatCount(0);
-        animator.addUpdateListener(new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-                float value = (Float) animation.getAnimatedValue();
-                ivCancel.getLayoutParams().width = (int) (mOriginIconWidth * value);
-                ivCancel.getLayoutParams().height = (int) (mOriginIconHeight * value);
-                ivCancel.requestLayout();
-            }
-        });
-        animator.start();
+        return ViewUtils.isEventAbsoluteLocationInView(getContext(),
+                mRecordStatusDialog.getBottomLayout(), event);
     }
 
     /**
      * 初始化录音对话框 并开始录音
      */
     private void initDialogAndStartRecord() {
-        mRecordStatusDialog = new Dialog(getContext(), R.style.record_dialog_style);
-        View view = View.inflate(getContext(), R.layout.dialog_record, null);
-        mVoiceStatusPanel = view.findViewById(R.id.btn_wx_voice);
-        tvCancel = view.findViewById(R.id.tv_cancel);
-        tvSend = view.findViewById(R.id.tv_send);
-        llBottom = view.findViewById(R.id.ll_bottom);
-        ivRecord = view.findViewById(R.id.iv_record);
-        ivCancel = view.findViewById(R.id.iv_cancel);
-        tvCancel.setVisibility(INVISIBLE);
-
-        mRecordStatusDialog.setContentView(view, new FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT));
-        Window window = mRecordStatusDialog.getWindow();
-        if (window != null) {
-            window.getDecorView().setPadding(0, 0, 0, 0);
-            WindowManager.LayoutParams layoutParams = window.getAttributes();
-            window.setBackgroundDrawableResource(android.R.color.transparent);
-            layoutParams.width = WindowManager.LayoutParams.MATCH_PARENT;
-            layoutParams.height = WindowManager.LayoutParams.MATCH_PARENT;
-            window.setAttributes(layoutParams);
-        }
-
+        mRecordStatusDialog = new RecordStatusDialog(getContext());
         if (startRecording()) {
             mRecordStatusDialog.show();
         }
-
-        mOriginIconWidth = ivCancel.getLayoutParams().width;
-        mOriginIconHeight = ivCancel.getLayoutParams().height;
     }
 
     /**
@@ -280,8 +185,8 @@ public class RecordButton extends AppCompatButton {
             return;
         }
 
-        if (reocrdTime < MIN_RECORD_TIME_THRESHOLD) {
-            Toast.makeText(getContext(), "录音时间太短", Toast.LENGTH_SHORT).show();
+        if (reocrdTime < mRecordConfig.getShortestRecordTime()) {
+            Toast.makeText(getContext(), R.string.talk_time_is_too_short, Toast.LENGTH_SHORT).show();
             file.delete();
             return;
         }
@@ -295,19 +200,21 @@ public class RecordButton extends AppCompatButton {
             e.printStackTrace();
         }
 
-        if (mOnFinishedRecordListener == null)
-            return;
-
-        mOnFinishedRecordListener.onFinishedRecord(wavFileName, mediaPlayer.getDuration() / 1000);
+        if (mOnRecordListener != null) {
+            mOnRecordListener.onFinish(wavFileName, mediaPlayer.getDuration() / 1000);
+        }
     }
 
     /**
-     * 取消录音对话框和停止录音
+     * 放开手指，取消录音处理
      */
     public void cancelRecord() {
         stopRecording();
         File file = new File(mRecordFileName);
         file.delete();
+        if (mOnRecordListener != null) {
+            mOnRecordListener.onCancel();
+        }
     }
 
     /**
@@ -320,7 +227,7 @@ public class RecordButton extends AppCompatButton {
             mRecorder = new MediaRecorder();
         }
         mStartRecordTime = System.currentTimeMillis();
-        mRecordFileName = getContext().getFilesDir() + "/" + "voice_" + mStartRecordTime + ".wav";
+        mRecordFileName = mRecordConfig.getRecordFileName();
         mRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mRecorder.setOutputFormat(MediaRecorder.OutputFormat.DEFAULT);
         mRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
@@ -361,10 +268,6 @@ public class RecordButton extends AppCompatButton {
             mRecordStatusDialog.dismiss();
             mRecordStatusDialog = null;
         }
-        if (mVoiceStatusPanel != null) {
-            mVoiceStatusPanel.destroy();
-            mVoiceStatusPanel = null;
-        }
     }
 
     /**
@@ -373,6 +276,7 @@ public class RecordButton extends AppCompatButton {
      * 到达最大时间以后自动停止
      */
     private class ObtainDecibelThread extends Thread {
+        @SuppressLint("MissingPermission")
         @Override
         public void run() {
             while (runningObtainDecibelThread) {
@@ -391,15 +295,15 @@ public class RecordButton extends AppCompatButton {
                 long now = System.currentTimeMillis();
                 long recordingTime = now - mStartRecordTime;
                 //录音超出最大时间
-                if (recordingTime > MAX_RECORD_TIME_THRESHOLD) {
+                if (recordingTime > mRecordConfig.getLongestRecordTime()) {
                     finishRecord();
                     return;
                 }
 
                 //少于十秒则提醒
-                long lessTime = MAX_RECORD_TIME_THRESHOLD - recordingTime;
-                if (lessTime < RECORD_LEFT_TIME_TO_NOTICE) {
-                    mVoiceStatusPanel.setmTextContent(lessTime / 1000 + "秒后将结束录音");
+                long lessTime = mRecordConfig.getLongestRecordTime() - recordingTime;
+                if (lessTime < mRecordConfig.getWhatLeftTimeToNotice()) {
+                    mRecordStatusDialog.updatePanelText(lessTime / 1000 + getResources().getString(R.string.will_be_finish_record_after_x_second));
                     if (vibrateNotice) {
                         vibrateNotice = false;
                         Vibrator vibrator =
@@ -407,7 +311,7 @@ public class RecordButton extends AppCompatButton {
                         vibrator.vibrate(500);
                     }
                 } else {
-                    mVoiceStatusPanel.updateVoiceDb((int) db);
+                    mRecordStatusDialog.updatePanelVoiceDb((int) db);
                 }
 
                 try {
@@ -420,15 +324,20 @@ public class RecordButton extends AppCompatButton {
     }
 
     /**
-     * 录音结束监听
+     * 录音监听
      */
-    public interface OnFinishedRecordListener {
+    public interface OnRecordListener {
         /**
          * 录音结束
          *
          * @param audioPath 音频文件路径
          * @param time      录音时长
          */
-        void onFinishedRecord(String audioPath, int time);
+        void onFinish(String audioPath, int time);
+
+        /**
+         * 录音取消
+         */
+        void onCancel();
     }
 }

@@ -23,6 +23,8 @@ import java.util.Random;
 import androidx.annotation.Nullable;
 
 /**
+ * Created by Horrarndoo on 2022/9/21.
+ * <p>
  * 声音状态面板（配合RecordButton使用）
  * <p>
  * 在录音的时候可以通过 {@link #updateVoiceDb(int)} 来设置声音波纹的显示，根据传入的db值动态显示
@@ -262,9 +264,9 @@ public class VoiceStatusPanel extends View {
         return (int) (dpValue * scale + 0.5f);
     }
 
-    public void setmTextContent(String mTextContent) {
+    public void setTextContent(String textContent) {
         isShowingText = true;
-        this.mTextContent = mTextContent;
+        this.mTextContent = textContent;
         txtPaint.getTextBounds(mTextContent, 0, mTextContent.length(), mTextRect);
     }
 
