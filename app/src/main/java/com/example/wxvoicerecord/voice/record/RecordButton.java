@@ -70,7 +70,7 @@ public class RecordButton extends AppCompatButton {
     /**
      * 录音状态，避免重复刷新界面，仅当状态变化时才刷新显示
      */
-    private volatile int mRecordingState = NORMAL;
+    private static volatile int mRecordingState = NORMAL;
     /**
      * 录音状态dialog
      */
@@ -268,6 +268,7 @@ public class RecordButton extends AppCompatButton {
             mRecordStatusDialog.dismiss();
             mRecordStatusDialog = null;
         }
+        mRecordingState = NORMAL;
     }
 
     /**
