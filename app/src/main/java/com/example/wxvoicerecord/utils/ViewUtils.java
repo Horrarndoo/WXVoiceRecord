@@ -70,8 +70,8 @@ public class ViewUtils {
         int statusBarHeight = 0;
         Window window = ((Activity) context).getWindow();
         //如果是非全屏应用，要把statusBar的高度减掉，因为rawY是从0 0 开始，view是从statusBar下方开始
-        if ((window.getAttributes().flags & WindowManager.LayoutParams.FLAG_FULLSCREEN)
-                != WindowManager.LayoutParams.FLAG_FULLSCREEN) {
+        if ((window.getAttributes().flags & WindowManager.LayoutParams.FLAG_FULLSCREEN) != WindowManager.LayoutParams.FLAG_FULLSCREEN
+                && (window.getDecorView().getSystemUiVisibility() & View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN) != View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN) {
             statusBarHeight = getStatusBarHeight(context);
         }
 
@@ -86,7 +86,7 @@ public class ViewUtils {
                 && (ev.getRawY() - statusBarHeight >= top)
                 && (ev.getRawY() - statusBarHeight <= bottom);
     }
-
+    
     /**
      * 获取系统状态栏高度
      *
