@@ -23,6 +23,7 @@ import static android.view.View.VISIBLE;
  * <p>
  */
 public class RecordStatusDialog extends BaseImmerseDialog {
+    private volatile boolean isFirstShow = true;
     private LinearLayout llBottom;
     private TextView tvCancel;
     private TextView tvSend;
@@ -87,6 +88,10 @@ public class RecordStatusDialog extends BaseImmerseDialog {
         ivRecord.setColorFilter(getContext().getColor(R.color.record_selected_bottom_icon_color));
         ivCancel.setBackground(getContext().getDrawable(R.drawable.shape_record_cancel_button_unselected_bg));
         ivCancel.setColorFilter(getContext().getColor(R.color.record_cancel_button_unselected_tint_color));
+        if (isFirstShow) {
+            isFirstShow = false;
+            return;
+        }
         setCancelImageZoom(false);
     }
 
@@ -106,6 +111,10 @@ public class RecordStatusDialog extends BaseImmerseDialog {
         ivRecord.setColorFilter(getContext().getColor(R.color.record_unselected_bottom_icon_color));
         ivCancel.setBackground(getContext().getDrawable(R.drawable.shape_record_cancel_button_selected_bg));
         ivCancel.setColorFilter(getContext().getColor(R.color.record_cancel_button_selected_tint_color));
+        if (isFirstShow) {
+            isFirstShow = false;
+            return;
+        }
         setCancelImageZoom(true);
     }
 

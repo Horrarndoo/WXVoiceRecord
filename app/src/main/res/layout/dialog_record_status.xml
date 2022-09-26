@@ -3,6 +3,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:background="@android:color/transparent">
 
     <com.example.wxvoicerecord.voice.VoiceStatusPanel
@@ -22,7 +23,8 @@
         android:layout_marginBottom="10dp"
         android:text="@string/release_to_cancel"
         android:textColor="@color/record_status_text_color"
-        android:textSize="14sp" />
+        android:textSize="14sp"
+        android:visibility="invisible" />
 
     <FrameLayout
         android:id="@+id/fl_cancel_container"
@@ -36,11 +38,11 @@
             android:id="@+id/iv_cancel"
             android:layout_width="60dp"
             android:layout_height="60dp"
-            android:padding="22dp"
             android:layout_gravity="center"
             android:background="@drawable/shape_record_cancel_button_unselected_bg"
-            android:tint="@color/record_cancel_button_unselected_tint_color"
-            android:src="@drawable/ic_vector_cancel" />
+            android:padding="22dp"
+            android:src="@drawable/ic_vector_cancel"
+            android:tint="@color/record_cancel_button_unselected_tint_color" />
 
     </FrameLayout>
 
@@ -65,11 +67,12 @@
         android:gravity="center"
         android:orientation="vertical">
 
-        <ImageView
+        <androidx.appcompat.widget.AppCompatImageView
             android:id="@+id/iv_record"
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:layout_gravity="center"
+            app:tint="@color/record_selected_bottom_icon_color"
             android:src="@drawable/ic_vector_voice_left_level_3"
             tools:ignore="ContentDescription" />
     </LinearLayout>
