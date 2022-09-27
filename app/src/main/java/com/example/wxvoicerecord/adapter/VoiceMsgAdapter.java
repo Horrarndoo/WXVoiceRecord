@@ -7,15 +7,15 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
-import androidx.recyclerview.widget.RecyclerView;
-
 import com.example.wxvoicerecord.R;
 import com.example.wxvoicerecord.bean.VoiceMsg;
 import com.example.wxvoicerecord.voice.MediaManager;
 
 import java.text.SimpleDateFormat;
 import java.util.List;
+
+import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.RecyclerView;
 
 /**
  * @author zhuguohui
@@ -80,7 +80,7 @@ public class VoiceMsgAdapter extends RecyclerView.Adapter<VoiceMsgAdapter.BaseVi
         boolean justStop = newAudioView == ivAudio;
         if (ivAudio != null) {
             ivAudio.setBackgroundResource(R.drawable.ic_vector_voice_left_level_3);
-            MediaManager.reset();
+            MediaManager.getInstance().reset();
         }
         if (justStop) {
             //点击正在播放的View 只停止播放
@@ -88,14 +88,14 @@ public class VoiceMsgAdapter extends RecyclerView.Adapter<VoiceMsgAdapter.BaseVi
         }
 
         ivAudio = newAudioView;
-        MediaManager.reset();
+        MediaManager.getInstance().reset();
 
         ivAudio.setBackgroundResource(R.drawable.voice_animation_left_list);
         AnimationDrawable drawable = (AnimationDrawable) ivAudio.getBackground();
         drawable.start();
-        MediaManager.playSound(view.getContext(), item.getPath(), mp -> {
+        MediaManager.getInstance().playVoice(item.getPath(), mp -> {
             ivAudio.setBackgroundResource(R.drawable.ic_vector_voice_left_level_3);
-            MediaManager.release();
+            MediaManager.getInstance().release();
             ivAudio = null;
         });
 

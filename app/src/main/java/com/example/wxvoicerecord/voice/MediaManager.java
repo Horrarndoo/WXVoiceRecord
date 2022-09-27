@@ -1,134 +1,99 @@
 package com.example.wxvoicerecord.voice;
 
 
-import android.content.Context;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.media.MediaPlayer.OnCompletionListener;
-import android.media.MediaPlayer.OnErrorListener;
-import android.os.Handler;
-import android.util.Log;
-
-import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
 
 public class MediaManager {
-    public static MediaPlayer mPlayer;
-    private static boolean isPause;
-    public static boolean isStart = false;
-    public static String filepathstrings;
-    private static OnCompletionListener onCompletionListener;
-    public static void playSound(Context context, String filePathString,
-                                 OnCompletionListener onCompletionListener) {//
-        if (mPlayer == null) {
-            mPlayer = getMediaPlayer(context);
-            //保险起见，设置报错监听
-            mPlayer.setOnErrorListener(new OnErrorListener() {
+    public volatile static MediaManager instance;
+    private static MediaPlayer mPlayer;
+    private static boolean isVoicePause;
+    /**
+     * 是否正在播放录音文件
+     */
+    public static boolean isVoicePlaying = false;
+    /**
+     * 当前播放录音文件path
+     */
+    public static String playingVoicePath;
+    /**
+     * 播放完成监听
+     */
+    private OnCompletionListener mOnCompletionListener;
 
-                @Override
-                public boolean onError(MediaPlayer mp, int what, int extra) {
-                    mPlayer.reset();
-                    return false;
+    private MediaManager() {
+        mPlayer = new MediaPlayer();
+    }
+
+    public static MediaManager getInstance() {
+        if (instance == null) {
+            synchronized (MediaManager.class) {
+                if (instance == null) {
+                    instance = new MediaManager();
                 }
-            });
-        } else {
-            mPlayer.reset();//就恢复
+            }
         }
-      MediaManager.onCompletionListener=onCompletionListener;
+        return instance;
+    }
+
+    /**
+     * 播放音频
+     */
+    public void playVoice(String voicePath, OnCompletionListener onCompletionListener) {
+        if (mPlayer == null) {
+            return;
+        }
+
+        mPlayer.reset();
+        mOnCompletionListener = onCompletionListener;
         try {
-            filepathstrings = filePathString;
+            playingVoicePath = voicePath;
             mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
             mPlayer.setOnCompletionListener(onCompletionListener);
-            mPlayer.setDataSource(filePathString);
+            mPlayer.setDataSource(voicePath);
             mPlayer.setVolume(90, 90);
             mPlayer.setLooping(false);
             mPlayer.prepare();
             mPlayer.start();
-            isStart = true;
-        } catch (IllegalArgumentException e) {
-            e.printStackTrace();
-        } catch (SecurityException e) {
-            e.printStackTrace();
-        } catch (IllegalStateException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+            isVoicePlaying = true;
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    //停止函数
-    public static void pause() {
-        if (mPlayer != null && mPlayer.isPlaying()) {
+    public void pause() {
+        if (isPlaying()) {
             mPlayer.pause();
-            isPause = true;
+            isVoicePause = true;
         }
     }
 
-
-    //停止函数
-    public static void reset() {
-        if (mPlayer != null && mPlayer.isPlaying()) {
+    public void reset() {
+        if (isPlaying()) {
             mPlayer.reset();
-            if(onCompletionListener!=null){
-                onCompletionListener.onCompletion(null);
+            if (mOnCompletionListener != null) {
+                mOnCompletionListener.onCompletion(null);
             }
         }
+        isVoicePlaying = false;
     }
 
-    //停止函数
-    public static boolean isStart() {
-        if (mPlayer != null && mPlayer.isPlaying()) {
-            return true;
-        }
-        return false;
+    public boolean isPlaying() {
+        return mPlayer != null && mPlayer.isPlaying();
     }
 
-    //继续
-    public static void resume() {
-        if (mPlayer != null && isPause) {
+    public void resume() {
+        if (mPlayer != null && isVoicePause) {
             mPlayer.start();
-            isPause = false;
+            isVoicePause = false;
         }
     }
 
-
-    public static void release() {
+    public void release() {
         if (mPlayer != null) {
             mPlayer.release();
             mPlayer = null;
         }
-    }
-
-    public static MediaPlayer getMediaPlayer(Context context) {
-        MediaPlayer mediaplayer = new MediaPlayer();
-        if (android.os.Build.VERSION.SDK_INT < android.os.Build.VERSION_CODES.KITKAT) {
-            return mediaplayer;
-        }
-        try {
-            Class<?> cMediaTimeProvider = Class.forName("android.media.MediaTimeProvider");
-            Class<?> cSubtitleController = Class.forName("android.media.SubtitleController");
-            Class<?> iSubtitleControllerAnchor = Class.forName("android.media.SubtitleController$Anchor");
-            Class<?> iSubtitleControllerListener = Class.forName("android.media.SubtitleController$Listener");
-            Constructor constructor = cSubtitleController.getConstructor(
-                    new Class[]{Context.class, cMediaTimeProvider, iSubtitleControllerListener});
-            Object subtitleInstance = constructor.newInstance(context, null, null);
-            Field f = cSubtitleController.getDeclaredField("mHandler");
-            f.setAccessible(true);
-            try {
-                f.set(subtitleInstance, new Handler());
-            } catch (IllegalAccessException e) {
-                return mediaplayer;
-            } finally {
-                f.setAccessible(false);
-            }
-            Method setsubtitleanchor = mediaplayer.getClass().getMethod("setSubtitleAnchor",
-                    cSubtitleController, iSubtitleControllerAnchor);
-            setsubtitleanchor.invoke(mediaplayer, subtitleInstance, null);
-        } catch (Exception e) {
-            Log.d("mediaManager", "getMediaPlayer crash ,exception = " + e);
-        }
-        return mediaplayer;
     }
 }

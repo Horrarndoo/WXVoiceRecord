@@ -108,7 +108,7 @@ public class RecordButton extends AppCompatButton {
         switch (action) {
             case MotionEvent.ACTION_DOWN:
                 //按下的时候，重新生成一个语音保存的地址，避免一直读写一个文件，可以引起错误
-                MediaManager.reset();//停止其他音频播放
+                MediaManager.getInstance().reset();//停止其他音频播放
                 initDialogAndStartRecord();
                 break;
             case MotionEvent.ACTION_MOVE:
