@@ -7,7 +7,7 @@ import android.media.MediaPlayer.OnCompletionListener;
 
 public class MediaManager {
     public volatile static MediaManager instance;
-    private static MediaPlayer mPlayer;
+    private MediaPlayer mPlayer;
     private static boolean isVoicePause;
     /**
      * 是否正在播放录音文件
@@ -95,5 +95,6 @@ public class MediaManager {
             mPlayer.release();
             mPlayer = null;
         }
+        instance = null;
     }
 }
