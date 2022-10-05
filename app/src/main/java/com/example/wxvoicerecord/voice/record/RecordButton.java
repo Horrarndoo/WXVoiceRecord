@@ -126,6 +126,11 @@ public class RecordButton extends AppCompatButton {
                 break;
             case MotionEvent.ACTION_UP:
             case MotionEvent.ACTION_CANCEL:
+                //录音达到最大时长时，会自动结束录音并且消息dialog，此时需要判断，否则会判断为cancel将录音文件删除
+                if (mRecordStatusDialog == null) {
+                    break;
+                }
+
                 //当手指不在录音区域，会cancel
                 if (!isLocationInRecordRect(event)) {
                     cancelRecord();
@@ -178,10 +183,8 @@ public class RecordButton extends AppCompatButton {
         final String wavFileName = mRecordFileName;
         File file = new File(wavFileName);
         stopRecording();
+
         if (!file.exists()) {
-            //如果文件不存在，则返回
-            //当我们到底最长时间，会在ObtainDecibelThread中，和onTouchEvent方法中，重复调用该方法
-            //因此做一个检测
             return;
         }
 

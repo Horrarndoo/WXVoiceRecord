@@ -10,13 +10,9 @@ public class MediaManager {
     private MediaPlayer mPlayer;
     private static boolean isVoicePause;
     /**
-     * 是否正在播放录音文件
-     */
-    public static boolean isVoicePlaying = false;
-    /**
      * 当前播放录音文件path
      */
-    public static String playingVoicePath;
+    private String mPlayingVoicePath;
     /**
      * 播放完成监听
      */
@@ -48,7 +44,7 @@ public class MediaManager {
         mPlayer.reset();
         mOnCompletionListener = onCompletionListener;
         try {
-            playingVoicePath = voicePath;
+            mPlayingVoicePath = voicePath;
             mPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
             mPlayer.setOnCompletionListener(onCompletionListener);
             mPlayer.setDataSource(voicePath);
@@ -56,7 +52,6 @@ public class MediaManager {
             mPlayer.setLooping(false);
             mPlayer.prepare();
             mPlayer.start();
-            isVoicePlaying = true;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -76,11 +71,18 @@ public class MediaManager {
                 mOnCompletionListener.onCompletion(null);
             }
         }
-        isVoicePlaying = false;
+        mPlayingVoicePath = "";
     }
 
     public boolean isPlaying() {
         return mPlayer != null && mPlayer.isPlaying();
+    }
+
+    public String getPlayingVoicePath() {
+        if (!isPlaying()) {
+            mPlayingVoicePath = "";
+        }
+        return mPlayingVoicePath;
     }
 
     public void resume() {
@@ -95,6 +97,7 @@ public class MediaManager {
             mPlayer.release();
             mPlayer = null;
         }
+        mPlayingVoicePath = "";
         instance = null;
     }
 }
